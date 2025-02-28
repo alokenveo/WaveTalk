@@ -8,6 +8,7 @@ import {
   obtenerChatsUsuario,
   obtenerMensajesChat,
   cerrarChat,
+  abrirChat,
   enviarMensaje,
   obtenerUsuarios,
   crearChat,
@@ -150,12 +151,32 @@ app.whenReady().then(async () => {
     })
   })
 
-  ipcMain.on('cerrar-chat', (event, chatId) => {
-    cerrarChat(chatId, (err) => {
+  ipcMain.on('cerrar-chat', (event, { chatId, usuarioId }) => {
+    cerrarChat({ chatId, usuarioId }, (err, result) => {
       if (err) {
         event.reply('chat-cerrado-respuesta', { error: err.message })
       } else {
         event.reply('chat-cerrado-respuesta', { success: true })
+        notifyUsers([result.usuario1_id, result.usuario2_id], 'chat-estado-cambiado', {
+          chat_id: chatId,
+          estado: 'cerrado',
+          cerradoPor: usuarioId
+        })
+      }
+    })
+  })
+
+  ipcMain.on('abrir-chat', (event, { chatId, usuarioId }) => {
+    abrirChat({ chatId, usuarioId }, (err, result) => {
+      if (err) {
+        event.reply('chat-abierto-respuesta', { error: err.message })
+      } else {
+        event.reply('chat-abierto-respuesta', { success: true })
+        notifyUsers([result.usuario1_id, result.usuario2_id], 'chat-estado-cambiado', {
+          chat_id: chatId,
+          estado: 'activo',
+          cerradoPor: null
+        })
       }
     })
   })

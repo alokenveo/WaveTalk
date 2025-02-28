@@ -70,6 +70,23 @@ function Home() {
             )
           )
         }
+        if (eventType === 'chat-estado-cambiado') {
+          console.log('Estado del chat cambiado recibido:', data)
+          setChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id
+                ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
+                : chat
+            )
+          )
+          setFilteredChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id
+                ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
+                : chat
+            )
+          )
+        }
       })
     } catch (error) {
       console.error('Error al suscribirse a WebSocket en Home.jsx:', error)

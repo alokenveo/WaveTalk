@@ -32,6 +32,11 @@ function Chat({ chat, usuario }) {
         if (eventType === 'tema-cambiado' && data.chat_id === chat.id) {
           chat.tema = data.tema
         }
+        if (eventType === 'chat-estado-cambiado' && data.chat_id === chat.id) {
+          // Nuevo evento
+          chat.estado = data.estado
+          chat.cerradoPor = data.cerradoPor
+        }
       })
     } catch (error) {
       console.error('Error al suscribirse a WebSocket en Chat.jsx:', error)
@@ -47,7 +52,7 @@ function Chat({ chat, usuario }) {
 
   const handleSendMessage = (e) => {
     e.preventDefault()
-    if (!mensajeInput.trim()) return
+    if (!mensajeInput.trim() || chat.estado === 'cerrado') return
 
     const nuevoMensaje = {
       chat_id: chat.id,
@@ -81,22 +86,34 @@ function Chat({ chat, usuario }) {
       if (response.error) {
         console.error(response.error)
       } else {
-        chat.tema = selectedTopic // Actualizar el tema en el objeto chat
-        setShowTopicModal(false) // Cerrar el modal
+        chat.tema = selectedTopic
+        setShowTopicModal(false)
       }
     })
   }
 
   const handleBlock = () => {
-    window.electron.send('cerrar-chat', chat.id)
+    window.electron.send('cerrar-chat', { chatId: chat.id, usuarioId: usuario.id }) // Enviar usuarioId
     window.electron.once('chat-cerrado-respuesta', (event, response) => {
       if (response.error) {
         console.error(response.error)
       } else {
         console.log('Chat cerrado')
+        setShowOptions(false)
       }
     })
-    setShowOptions(false)
+  }
+
+  const handleUnblock = () => {
+    window.electron.send('abrir-chat', { chatId: chat.id, usuarioId: usuario.id })
+    window.electron.once('chat-abierto-respuesta', (event, response) => {
+      if (response.error) {
+        console.error(response.error)
+      } else {
+        console.log('Chat desbloqueado')
+        setShowOptions(false)
+      }
+    })
   }
 
   const temasDisponibles = [
@@ -109,6 +126,9 @@ function Chat({ chat, usuario }) {
     'naturaleza',
     'videojuegos'
   ]
+
+  const isBlocked = chat.estado === 'cerrado'
+  const canUnblock = isBlocked && chat.cerradoPor === usuario.id
 
   return (
     <div className="chat-container">
@@ -124,7 +144,15 @@ function Chat({ chat, usuario }) {
           {showOptions && (
             <div className="options-menu">
               <button onClick={handleChangeTopic}>Cambiar tema</button>
-              <button onClick={handleBlock}>Bloquear</button>
+              {isBlocked ? (
+                canUnblock ? (
+                  <button onClick={handleUnblock}>Desbloquear</button>
+                ) : (
+                  <p>Chat bloqueado por otro usuario</p>
+                )
+              ) : (
+                <button onClick={handleBlock}>Bloquear</button>
+              )}
             </div>
           )}
         </div>
@@ -142,16 +170,17 @@ function Chat({ chat, usuario }) {
       </div>
 
       <form className="input-bar" onSubmit={handleSendMessage}>
-        <button type="button" className="more-btn">
+        <button type="button" className="more-btn" disabled={isBlocked}>
           +
         </button>
         <input
           type="text"
           value={mensajeInput}
           onChange={(e) => setMensajeInput(e.target.value)}
-          placeholder="Escribe un mensaje..."
+          placeholder={isBlocked ? 'Este chat está bloqueado' : 'Escribe un mensaje...'}
+          disabled={isBlocked}
         />
-        <button type="submit" className="send-btn">
+        <button type="submit" className="send-btn" disabled={isBlocked}>
           ➤
         </button>
       </form>
@@ -199,7 +228,9 @@ Chat.propTypes = {
     interlocutor: PropTypes.string.isRequired,
     tema: PropTypes.string,
     usuario1_id: PropTypes.number.isRequired,
-    usuario2_id: PropTypes.number.isRequired
+    usuario2_id: PropTypes.number.isRequired,
+    estado: PropTypes.string, // Añadimos estado
+    cerradoPor: PropTypes.number // Añadimos cerradoPor
   }).isRequired,
   usuario: PropTypes.shape({
     id: PropTypes.number.isRequired,

@@ -41,8 +41,10 @@ const db = new sqlite3.Database(dbPath, (err) => {
         tema TEXT CHECK(tema IN ('fútbol', 'amor', 'viajes', 'música', 'cine', 'tecnología', 'naturaleza', 'videojuegos') OR tema IS NULL) DEFAULT NULL,
         fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
         estado TEXT CHECK(estado IN ('activo', 'cerrado')) DEFAULT 'activo',
+        cerrado_por INTEGER,
         FOREIGN KEY (usuario1_id) REFERENCES usuarios(id),
-        FOREIGN KEY (usuario2_id) REFERENCES usuarios(id)
+        FOREIGN KEY (usuario2_id) REFERENCES usuarios(id),
+        FOREIGN KEY (cerrado_por) REFERENCES usuarios(id)
       )`,
       (err) => {
         if (err) console.error('Error al crear la tabla de chats', err)
@@ -119,8 +121,9 @@ export function obtenerChatsUsuario(usuarioId, callback) {
           c.tema, 
           c.fecha_creacion, 
           c.estado,
-          c.usuario1_id,  -- Añadido
-          c.usuario2_id,  -- Añadido
+          c.cerrado_por,
+          c.usuario1_id,
+          c.usuario2_id,
           CASE 
             WHEN c.usuario1_id = ? THEN u2.nombre 
             ELSE u1.nombre 
@@ -185,20 +188,76 @@ export function enviarMensaje({ chat_id, usuario_id, mensaje }, callback) {
     .catch((err) => callback(err, null))
 }
 
-export function cerrarChat(chatId, callback) {
+export function cerrarChat({ chatId, usuarioId }, callback) {
   withDatabaseLock(() => {
     return new Promise((resolve, reject) => {
-      db.run(`UPDATE chats SET estado = 'cerrado' WHERE id = ?`, [chatId], function (err) {
+      db.run(
+        `UPDATE chats SET estado = 'cerrado', cerrado_por = ? WHERE id = ?`,
+        [usuarioId, chatId],
+        function (err) {
+          if (err) {
+            reject(err)
+          } else {
+            db.get(
+              `SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?`,
+              [chatId],
+              (err, row) => {
+                if (err) {
+                  reject(err)
+                } else if (!row) {
+                  reject(new Error('Chat no encontrado'))
+                } else {
+                  resolve({ usuario1_id: row.usuario1_id, usuario2_id: row.usuario2_id })
+                }
+              }
+            )
+          }
+        }
+      )
+    })
+  })
+    .then((result) => callback(null, result))
+    .catch((err) => callback(err, null))
+}
+
+export function abrirChat({ chatId, usuarioId }, callback) {
+  withDatabaseLock(() => {
+    return new Promise((resolve, reject) => {
+      db.get(`SELECT cerrado_por FROM chats WHERE id = ?`, [chatId], (err, row) => {
         if (err) {
           reject(err)
+        } else if (!row) {
+          reject(new Error('Chat no encontrado'))
+        } else if (row.cerrado_por !== usuarioId) {
+          reject(new Error('Solo quien cerró el chat puede desbloquearlo'))
         } else {
-          resolve()
+          db.run(
+            `UPDATE chats SET estado = 'activo', cerrado_por = NULL WHERE id = ?`,
+            [chatId],
+            function (err) {
+              if (err) {
+                reject(err)
+              } else {
+                db.get(
+                  `SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?`,
+                  [chatId],
+                  (err, row) => {
+                    if (err) {
+                      reject(err)
+                    } else {
+                      resolve({ usuario1_id: row.usuario1_id, usuario2_id: row.usuario2_id })
+                    }
+                  }
+                )
+              }
+            }
+          )
         }
       })
     })
   })
-    .then(() => callback(null))
-    .catch((err) => callback(err))
+    .then((result) => callback(null, result))
+    .catch((err) => callback(err, null))
 }
 
 export function obtenerUsuarios(callback) {
