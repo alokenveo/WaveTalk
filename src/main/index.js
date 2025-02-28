@@ -11,6 +11,7 @@ import {
   enviarMensaje,
   obtenerUsuarios,
   crearChat,
+  obtenerUsuarioPorId,
   db
 } from '../renderer/src/database.js'
 import { notifyUsers } from './websocket-server.js'
@@ -173,9 +174,27 @@ app.whenReady().then(async () => {
       if (err) {
         event.reply('chat-creado-respuesta', { error: err.message })
       } else {
-        event.reply('chat-creado-respuesta', { success: true, chat: nuevoChat })
-        // Notificar a los usuarios del nuevo chat
-        notifyUsers([nuevoChat.usuario1_id, nuevoChat.usuario2_id], 'nuevo-chat', nuevoChat)
+        // Obtener el nombre del interlocutor (usuario2_id desde la perspectiva de usuario1_id)
+        obtenerUsuarioPorId(chat.usuario2_id, (err, usuario) => {
+          if (err) {
+            console.error('Error al obtener usuario:', err)
+            // Enviar el chat sin interlocutor si falla (opcional)
+            event.reply('chat-creado-respuesta', { success: true, chat: nuevoChat })
+            notifyUsers([nuevoChat.usuario1_id, nuevoChat.usuario2_id], 'nuevo-chat', nuevoChat)
+          } else {
+            // Añadir el nombre del interlocutor al objeto del chat
+            const chatEnriquecido = {
+              ...nuevoChat,
+              interlocutor: usuario.nombre
+            }
+            event.reply('chat-creado-respuesta', { success: true, chat: chatEnriquecido })
+            notifyUsers(
+              [nuevoChat.usuario1_id, nuevoChat.usuario2_id],
+              'nuevo-chat',
+              chatEnriquecido
+            )
+          }
+        })
       }
     })
   })

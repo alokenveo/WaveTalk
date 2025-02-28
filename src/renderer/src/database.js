@@ -237,6 +237,24 @@ export function crearChat({ usuario1_id, usuario2_id, tema }, callback) {
     .catch((err) => callback(err, null))
 }
 
+export function obtenerUsuarioPorId(usuarioId, callback) {
+  withDatabaseLock(() => {
+    return new Promise((resolve, reject) => {
+      db.get(`SELECT id, nombre, correo FROM usuarios WHERE id = ?`, [usuarioId], (err, row) => {
+        if (err) {
+          reject(err)
+        } else if (!row) {
+          reject(new Error(`Usuario con ID ${usuarioId} no encontrado`))
+        } else {
+          resolve(row)
+        }
+      })
+    })
+  })
+    .then((result) => callback(null, result))
+    .catch((err) => callback(err, null))
+}
+
 export { db }
 
 export default db

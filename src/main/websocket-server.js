@@ -1,5 +1,5 @@
 // websocket-server.js
-const { WebSocketServer } = require('ws')
+import { WebSocketServer } from 'ws'
 
 const wss = new WebSocketServer({ port: 8080 })
 

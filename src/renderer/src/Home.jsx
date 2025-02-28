@@ -54,9 +54,10 @@ function Home() {
           )
         }
       })
-      setWs(websocket)
+      setWs(websocket) // Solo actualiza si la conexión es exitosa
     } catch (error) {
       console.error('Error al conectar WebSocket:', error)
+      setWs(null) // Asegúrate de que ws sea null si falla
     }
 
     // Limpiar WebSocket al desmontar
@@ -72,7 +73,10 @@ function Home() {
   }
 
   const handleLogout = () => {
-    if (ws) ws.close()
+    console.log('Estado de ws antes de cerrar:', ws)
+    if (ws && typeof ws.close === 'function') {
+      ws.close()
+    }
     navigate('/login')
   }
 
