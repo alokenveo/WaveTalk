@@ -1,3 +1,4 @@
+// Chat.jsx
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import './Chat.css'
@@ -6,8 +7,11 @@ function Chat({ chat, usuario }) {
   const [mensajes, setMensajes] = useState([])
   const [mensajeInput, setMensajeInput] = useState('')
   const [showOptions, setShowOptions] = useState(false)
+  const [ws, setWs] = useState(null)
 
+  // Chat.jsx
   useEffect(() => {
+    // Cargar mensajes iniciales
     window.electron.send('obtener-mensajes-chat', chat.id)
     window.electron.once('mensajes-respuesta', (event, response) => {
       if (response.error) {
@@ -16,7 +20,27 @@ function Chat({ chat, usuario }) {
         setMensajes(response.mensajes)
       }
     })
-  }, [chat.id])
+
+    // Conectar al WebSocket
+    let websocket
+    try {
+      websocket = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+        if (eventType === 'nuevo-mensaje' && data.chat_id === chat.id) {
+          setMensajes((prevMensajes) => [...prevMensajes, data])
+        }
+      })
+      setWs(websocket)
+    } catch (error) {
+      console.error('Error al conectar WebSocket:', error)
+    }
+
+    // Limpiar WebSocket al desmontar
+    return () => {
+      if (websocket && typeof websocket.close === 'function') {
+        websocket.close()
+      }
+    }
+  }, [chat.id, usuario.id])
 
   const handleSendMessage = (e) => {
     e.preventDefault()
@@ -33,7 +57,6 @@ function Chat({ chat, usuario }) {
       if (response.error) {
         console.error(response.error)
       } else {
-        setMensajes([...mensajes, response.mensaje])
         setMensajeInput('')
       }
     })
@@ -109,7 +132,7 @@ Chat.propTypes = {
   chat: PropTypes.shape({
     id: PropTypes.number.isRequired,
     interlocutor: PropTypes.string.isRequired,
-    tema: PropTypes.string, // Cambiado de isRequired a opcional
+    tema: PropTypes.string,
     usuario1_id: PropTypes.number.isRequired,
     usuario2_id: PropTypes.number.isRequired
   }).isRequired,

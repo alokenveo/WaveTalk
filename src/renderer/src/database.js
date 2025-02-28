@@ -237,4 +237,6 @@ export function crearChat({ usuario1_id, usuario2_id, tema }, callback) {
     .catch((err) => callback(err, null))
 }
 
+export { db }
+
 export default db

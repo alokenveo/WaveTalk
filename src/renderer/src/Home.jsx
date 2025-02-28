@@ -1,9 +1,10 @@
+// Home.jsx
 import waveTalkLogo from './assets/logo_waveTalk.png'
 import './assets/Home.css'
 import Chat from './components/Chat'
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import NuevoChatModal from './components/NuevoChatModal' // Nuevo componente
+import NuevoChatModal from './components/NuevoChatModal'
 
 function Home() {
   const [selectedChat, setSelectedChat] = useState(null)
@@ -11,23 +12,58 @@ function Home() {
   const [chats, setChats] = useState([])
   const [filteredChats, setFilteredChats] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [showNuevoChatModal, setShowNuevoChatModal] = useState(false) // Estado para el modal
+  const [showNuevoChatModal, setShowNuevoChatModal] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const usuario = location.state?.usuario
+  const [ws, setWs] = useState(null) // Estado para el WebSocket
 
+  // Home.jsx
   useEffect(() => {
-    console.log('Cargando mensajes...')
-    if (usuario) {
-      window.electron.send('obtener-chats-usuario', usuario.id)
-      window.electron.once('chats-respuesta', (event, response) => {
-        if (response.error) {
-          console.error(response.error)
-        } else {
-          setChats(response.chats)
-          setFilteredChats(response.chats)
+    if (!usuario) return
+
+    // Cargar chats iniciales
+    window.electron.send('obtener-chats-usuario', usuario.id)
+    window.electron.once('chats-respuesta', (event, response) => {
+      if (response.error) {
+        console.error(response.error)
+      } else {
+        setChats(response.chats)
+        setFilteredChats(response.chats)
+      }
+    })
+
+    // Conectar al WebSocket
+    let websocket
+    try {
+      websocket = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+        if (eventType === 'nuevo-chat') {
+          setChats((prevChats) => [...prevChats, data])
+          setFilteredChats((prevChats) => [...prevChats, data])
+        }
+        if (eventType === 'nuevo-mensaje' && !selectedChat) {
+          setChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id ? { ...chat, ultimoMensaje: data.mensaje } : chat
+            )
+          )
+          setFilteredChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id ? { ...chat, ultimoMensaje: data.mensaje } : chat
+            )
+          )
         }
       })
+      setWs(websocket)
+    } catch (error) {
+      console.error('Error al conectar WebSocket:', error)
+    }
+
+    // Limpiar WebSocket al desmontar
+    return () => {
+      if (websocket && typeof websocket.close === 'function') {
+        websocket.close()
+      }
     }
   }, [usuario])
 
@@ -36,6 +72,7 @@ function Home() {
   }
 
   const handleLogout = () => {
+    if (ws) ws.close()
     navigate('/login')
   }
 
@@ -44,14 +81,14 @@ function Home() {
     setSearchTerm(term)
     const filtered = chats.filter(
       (chat) =>
-        chat.interlocutor.toLowerCase().includes(term) || chat.tema.toLowerCase().includes(term)
+        chat.interlocutor.toLowerCase().includes(term) || chat.tema?.toLowerCase().includes(term)
     )
     setFilteredChats(filtered)
   }
 
   const handleNuevoChat = () => {
-    setShowSettingsMenu(false) // Cerrar el menú de settings
-    setShowNuevoChatModal(true) // Abrir el modal
+    setShowSettingsMenu(false)
+    setShowNuevoChatModal(true)
   }
 
   return (
@@ -114,7 +151,6 @@ function Home() {
         )}
       </div>
 
-      {/* Modal para nuevo chat */}
       {showNuevoChatModal && (
         <NuevoChatModal
           usuario={usuario}

@@ -22,7 +22,8 @@
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.0.0",

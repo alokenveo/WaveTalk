@@ -10,8 +10,10 @@ import {
   cerrarChat,
   enviarMensaje,
   obtenerUsuarios,
-  crearChat
+  crearChat,
+  db
 } from '../renderer/src/database.js'
+import { notifyUsers } from './websocket-server.js'
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -23,9 +25,37 @@ function createWindow() {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      devTools: true
+      devTools: true,
+      contextIsolation: true,
+      nodeIntegration: false
     }
   })
+
+  // En modo desarrollo, permitir conexiones WebSocket sin restricciones CSP
+  if (is.dev) {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            // Permitir todo en desarrollo para pruebas
+            "default-src 'self' http://localhost:5173; connect-src 'self' ws://localhost:8080 http://localhost:5173; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+          ]
+        }
+      })
+    })
+  } else {
+    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; connect-src 'self' ws://localhost:8080; script-src 'self'; style-src 'self'"
+          ]
+        }
+      })
+    })
+  }
 
   mainWindow.webContents.openDevTools()
 
@@ -104,6 +134,16 @@ app.whenReady().then(async () => {
         event.reply('mensaje-enviado-respuesta', { error: err.message })
       } else {
         event.reply('mensaje-enviado-respuesta', { success: true, mensaje: nuevoMensaje })
+        // Notificar a los usuarios del chat
+        db.get(
+          'SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?',
+          [nuevoMensaje.chat_id],
+          (err, row) => {
+            if (!err && row) {
+              notifyUsers([row.usuario1_id, row.usuario2_id], 'nuevo-mensaje', nuevoMensaje)
+            }
+          }
+        )
       }
     })
   })
@@ -134,6 +174,8 @@ app.whenReady().then(async () => {
         event.reply('chat-creado-respuesta', { error: err.message })
       } else {
         event.reply('chat-creado-respuesta', { success: true, chat: nuevoChat })
+        // Notificar a los usuarios del nuevo chat
+        notifyUsers([nuevoChat.usuario1_id, nuevoChat.usuario2_id], 'nuevo-chat', nuevoChat)
       }
     })
   })
