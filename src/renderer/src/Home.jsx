@@ -16,7 +16,7 @@ function Home() {
   const navigate = useNavigate()
   const location = useLocation()
   const usuario = location.state?.usuario
-  const wsRef = useRef(null) // Usar referencia para el WebSocket
+  const wsRef = useRef(null)
 
   useEffect(() => {
     if (!usuario) return
@@ -35,7 +35,7 @@ function Home() {
 
     // Conectar al WebSocket
     try {
-      console.log('Intentando conectar WebSocket para usuario:', usuario.id)
+      console.log('Suscribiendo a WebSocket para usuario:', usuario.id)
       wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
         console.log('Evento recibido en WebSocket (Home.jsx):', eventType, data)
         if (eventType === 'nuevo-chat') {
@@ -43,7 +43,8 @@ function Home() {
           setChats((prevChats) => [...prevChats, data])
           setFilteredChats((prevChats) => [...prevChats, data])
         }
-        if (eventType === 'nuevo-mensaje' && !selectedChat) {
+        if (eventType === 'nuevo-mensaje') {
+          // Quitamos !selectedChat
           console.log('Nuevo mensaje recibido:', data)
           setChats((prevChats) =>
             prevChats.map((chat) =>
@@ -70,19 +71,13 @@ function Home() {
           )
         }
       })
-      wsRef.current.onopen = () =>
-        console.log('WebSocket conectado en Home.jsx para usuario:', usuario.id)
-      wsRef.current.onclose = () =>
-        console.log('WebSocket cerrado en Home.jsx para usuario:', usuario.id)
-      wsRef.current.onerror = (err) => console.error('Error en WebSocket (Home.jsx):', err)
     } catch (error) {
-      console.error('Error al conectar WebSocket en Home.jsx:', error)
+      console.error('Error al suscribirse a WebSocket en Home.jsx:', error)
     }
 
-    // Limpiar WebSocket al desmontar
     return () => {
       if (wsRef.current && typeof wsRef.current.close === 'function') {
-        console.log('Cerrando WebSocket al desmontar en Home.jsx')
+        console.log('Desuscribiendo WebSocket en Home.jsx')
         wsRef.current.close()
       }
     }

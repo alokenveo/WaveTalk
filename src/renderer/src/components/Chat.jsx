@@ -1,5 +1,5 @@
 // Chat.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import './Chat.css'
 import fondoChat from '../../../../resources/fondos/fondo.jpg?assets'
@@ -8,13 +8,11 @@ function Chat({ chat, usuario }) {
   const [mensajes, setMensajes] = useState([])
   const [mensajeInput, setMensajeInput] = useState('')
   const [showOptions, setShowOptions] = useState(false)
-  const [ws, setWs] = useState(null)
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState(chat.tema || null)
+  const wsRef = useRef(null)
 
-  // Chat.jsx
   useEffect(() => {
-    // Cargar mensajes iniciales
     window.electron.send('obtener-mensajes-chat', chat.id)
     window.electron.once('mensajes-respuesta', (event, response) => {
       if (response.error) {
@@ -24,10 +22,10 @@ function Chat({ chat, usuario }) {
       }
     })
 
-    // Conectar al WebSocket
-    let websocket
     try {
-      websocket = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+      console.log('Suscribiendo a WebSocket en Chat.jsx para usuario:', usuario.id)
+      wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+        console.log('Evento recibido en WebSocket (Chat.jsx):', eventType, data)
         if (eventType === 'nuevo-mensaje' && data.chat_id === chat.id) {
           setMensajes((prevMensajes) => [...prevMensajes, data])
         }
@@ -35,15 +33,14 @@ function Chat({ chat, usuario }) {
           chat.tema = data.tema
         }
       })
-      setWs(websocket)
     } catch (error) {
-      console.error('Error al conectar WebSocket:', error)
+      console.error('Error al suscribirse a WebSocket en Chat.jsx:', error)
     }
 
-    // Limpiar WebSocket al desmontar
     return () => {
-      if (websocket && typeof websocket.close === 'function') {
-        websocket.close()
+      if (wsRef.current && typeof wsRef.current.close === 'function') {
+        console.log('Desuscribiendo WebSocket en Chat.jsx')
+        wsRef.current.close()
       }
     }
   }, [chat.id, usuario.id])
