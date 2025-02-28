@@ -2,7 +2,7 @@
 import waveTalkLogo from './assets/logo_waveTalk.png'
 import './assets/Home.css'
 import Chat from './components/Chat'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import NuevoChatModal from './components/NuevoChatModal'
 
@@ -16,9 +16,8 @@ function Home() {
   const navigate = useNavigate()
   const location = useLocation()
   const usuario = location.state?.usuario
-  const [ws, setWs] = useState(null) // Estado para el WebSocket
+  const wsRef = useRef(null) // Usar referencia para el WebSocket
 
-  // Home.jsx
   useEffect(() => {
     if (!usuario) return
 
@@ -26,22 +25,26 @@ function Home() {
     window.electron.send('obtener-chats-usuario', usuario.id)
     window.electron.once('chats-respuesta', (event, response) => {
       if (response.error) {
-        console.error(response.error)
+        console.error('Error al obtener chats:', response.error)
       } else {
+        console.log('Chats iniciales cargados:', response.chats)
         setChats(response.chats)
         setFilteredChats(response.chats)
       }
     })
 
     // Conectar al WebSocket
-    let websocket
     try {
-      websocket = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+      console.log('Intentando conectar WebSocket para usuario:', usuario.id)
+      wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
+        console.log('Evento recibido en WebSocket (Home.jsx):', eventType, data)
         if (eventType === 'nuevo-chat') {
+          console.log('Nuevo chat recibido:', data)
           setChats((prevChats) => [...prevChats, data])
           setFilteredChats((prevChats) => [...prevChats, data])
         }
         if (eventType === 'nuevo-mensaje' && !selectedChat) {
+          console.log('Nuevo mensaje recibido:', data)
           setChats((prevChats) =>
             prevChats.map((chat) =>
               chat.id === data.chat_id ? { ...chat, ultimoMensaje: data.mensaje } : chat
@@ -53,17 +56,34 @@ function Home() {
             )
           )
         }
+        if (eventType === 'tema-cambiado') {
+          console.log('Tema cambiado recibido:', data)
+          setChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+            )
+          )
+          setFilteredChats((prevChats) =>
+            prevChats.map((chat) =>
+              chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+            )
+          )
+        }
       })
-      setWs(websocket) // Solo actualiza si la conexión es exitosa
+      wsRef.current.onopen = () =>
+        console.log('WebSocket conectado en Home.jsx para usuario:', usuario.id)
+      wsRef.current.onclose = () =>
+        console.log('WebSocket cerrado en Home.jsx para usuario:', usuario.id)
+      wsRef.current.onerror = (err) => console.error('Error en WebSocket (Home.jsx):', err)
     } catch (error) {
-      console.error('Error al conectar WebSocket:', error)
-      setWs(null) // Asegúrate de que ws sea null si falla
+      console.error('Error al conectar WebSocket en Home.jsx:', error)
     }
 
     // Limpiar WebSocket al desmontar
     return () => {
-      if (websocket && typeof websocket.close === 'function') {
-        websocket.close()
+      if (wsRef.current && typeof wsRef.current.close === 'function') {
+        console.log('Cerrando WebSocket al desmontar en Home.jsx')
+        wsRef.current.close()
       }
     }
   }, [usuario])
@@ -73,9 +93,9 @@ function Home() {
   }
 
   const handleLogout = () => {
-    console.log('Estado de ws antes de cerrar:', ws)
-    if (ws && typeof ws.close === 'function') {
-      ws.close()
+    console.log('Estado de ws antes de cerrar:', wsRef.current)
+    if (wsRef.current && typeof wsRef.current.close === 'function') {
+      wsRef.current.close()
     }
     navigate('/login')
   }

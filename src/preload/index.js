@@ -13,6 +13,7 @@ const api = {
     ws.onmessage = (event) => {
       const { event: eventType, data } = JSON.parse(event.data)
       onMessage(eventType, data)
+      console.log('Mensaje recibido en WebSocket desde servidor:', eventType, data) // Log para depurar
     }
     ws.onopen = () => console.log(`WebSocket conectado para usuario ${userId}`)
     ws.onclose = () => console.log(`WebSocket cerrado para usuario ${userId}`)

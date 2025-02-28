@@ -1,137 +1,233 @@
 .chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-  }
-  
-  .chat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .back-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 5px 10px;
-  }
-  
-  .chat-header h3 {
-    margin: 0;
-    flex-grow: 1;
-    text-align: left;
-    padding-left: 10px;
-  }
-  
-  .options-container {
-    position: relative;
-  }
-  
-  .options-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 5px 10px;
-  }
-  
-  .options-menu {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-  }
-  
-  .options-menu button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 5px 10px;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .options-menu button:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .messages-area {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-    background-color: #fafafa;
-  }
-  
-  .message {
-    display: flex;
-    margin: 10px 0;
-  }
-  
-  .message.sent {
-    justify-content: flex-end;
-  }
-  
-  .message.received {
-    justify-content: flex-start;
-  }
-  
-  .message-bubble {
-    max-width: 70%;
-    padding: 10px;
-    border-radius: 10px;
-    word-wrap: break-word;
-  }
-  
-  .message.sent .message-bubble {
-    background-color: #007bff;
-    color: white;
-  }
-  
-  .message.received .message-bubble {
-    background-color: white;
-    border: 1px solid #ddd;
-  }
-  
-  .input-bar {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    background-color: #f0f0f0;
-    border-top: 1px solid #ddd;
-  }
-  
-  .more-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 5px 10px;
-  }
-  
-  .input-bar input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin: 0 10px;
-  }
-  
-  .send-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 5px 10px;
-    color: #007bff;
-  }
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #ddd;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.chat-header h3 {
+  margin: 0;
+  flex-grow: 1;
+  text-align: left;
+  padding-left: 10px;
+}
+
+.options-container {
+  position: relative;
+}
+
+.options-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.options-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.options-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.options-menu button:hover {
+  background-color: #f0f0f0;
+}
+
+.messages-area {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.message {
+  display: flex;
+  margin: 10px 0;
+}
+
+.message.sent {
+  justify-content: flex-end;
+}
+
+.message.received {
+  justify-content: flex-start;
+}
+
+.message-bubble {
+  max-width: 70%;
+  padding: 10px;
+  border-radius: 10px;
+  word-wrap: break-word;
+}
+
+.message.sent .message-bubble {
+  background-color: #007bff;
+  color: white;
+}
+
+.message.received .message-bubble {
+  background-color: white;
+  border: 1px solid #ddd;
+}
+
+.input-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-top: 1px solid #ddd;
+}
+
+.more-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.input-bar input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin: 0 10px;
+}
+
+.send-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 5px 10px;
+  color: #007bff;
+}
+
+/* Chat.css */
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999; /* Asegura que el modal esté encima de otros elementos */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+/* Título del Modal */
+.modal-content h2 {
+  margin: 0 0 20px;
+  font-size: 24px;
+  color: #333;
+}
+
+/* Opciones de Tema */
+.topic-options {
+  margin: 20px 0;
+  text-align: left;
+}
+
+.topic-options label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 18px;
+  color: #555;
+  cursor: pointer;
+}
+
+.topic-options input {
+  margin-right: 10px;
+  transform: scale(1.2);
+}
+
+/* Botones del Modal */
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.modal-buttons button {
+  padding: 8px 15px;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.modal-buttons button:hover {
+  background-color: #0056b3;
+}
+
+.modal-buttons button:last-child {
+  background-color: #ddd;
+  color: #333;
+}
+
+.modal-buttons button:last-child:hover {
+  background-color: #bbb;
+}
+
+/* Estilos existentes para el resto del chat */
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 10px;
+}
+

@@ -2,12 +2,15 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import './Chat.css'
+import fondoChat from '../../../../resources/fondos/fondo.jpg?assets'
 
 function Chat({ chat, usuario }) {
   const [mensajes, setMensajes] = useState([])
   const [mensajeInput, setMensajeInput] = useState('')
   const [showOptions, setShowOptions] = useState(false)
   const [ws, setWs] = useState(null)
+  const [showTopicModal, setShowTopicModal] = useState(false)
+  const [selectedTopic, setSelectedTopic] = useState(chat.tema || null)
 
   // Chat.jsx
   useEffect(() => {
@@ -27,6 +30,9 @@ function Chat({ chat, usuario }) {
       websocket = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
         if (eventType === 'nuevo-mensaje' && data.chat_id === chat.id) {
           setMensajes((prevMensajes) => [...prevMensajes, data])
+        }
+        if (eventType === 'tema-cambiado' && data.chat_id === chat.id) {
+          chat.tema = data.tema
         }
       })
       setWs(websocket)
@@ -63,8 +69,25 @@ function Chat({ chat, usuario }) {
   }
 
   const handleChangeTopic = () => {
-    console.log('Cambiar tema - Implementar más tarde')
     setShowOptions(false)
+    setShowTopicModal(true)
+  }
+
+  const handleTopicSelect = (e) => {
+    const value = e.target.value === 'null' ? null : e.target.value
+    setSelectedTopic(value)
+  }
+
+  const handleTopicSubmit = () => {
+    window.electron.send('cambiar-tema-chat', { chatId: chat.id, tema: selectedTopic })
+    window.electron.once('tema-cambiado-respuesta', (event, response) => {
+      if (response.error) {
+        console.error(response.error)
+      } else {
+        chat.tema = selectedTopic // Actualizar el tema en el objeto chat
+        setShowTopicModal(false) // Cerrar el modal
+      }
+    })
   }
 
   const handleBlock = () => {
@@ -78,6 +101,17 @@ function Chat({ chat, usuario }) {
     })
     setShowOptions(false)
   }
+
+  const temasDisponibles = [
+    'fútbol',
+    'amor',
+    'viajes',
+    'música',
+    'cine',
+    'tecnología',
+    'naturaleza',
+    'videojuegos'
+  ]
 
   return (
     <div className="chat-container">
@@ -99,7 +133,7 @@ function Chat({ chat, usuario }) {
         </div>
       </div>
 
-      <div className="messages-area">
+      <div className="messages-area" style={{ backgroundImage: `url(${fondoChat})` }}>
         {mensajes.map((msg) => (
           <div
             key={msg.id}
@@ -124,6 +158,40 @@ function Chat({ chat, usuario }) {
           ➤
         </button>
       </form>
+
+      {showTopicModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Cambiar Tema</h2>
+            <div className="topic-options">
+              <label>
+                <input
+                  type="radio"
+                  value="null"
+                  checked={selectedTopic === null}
+                  onChange={handleTopicSelect}
+                />
+                Sin tema
+              </label>
+              {temasDisponibles.map((tema) => (
+                <label key={tema}>
+                  <input
+                    type="radio"
+                    value={tema}
+                    checked={selectedTopic === tema}
+                    onChange={handleTopicSelect}
+                  />
+                  {tema.charAt(0).toUpperCase() + tema.slice(1)}
+                </label>
+              ))}
+            </div>
+            <div className="modal-buttons">
+              <button onClick={handleTopicSubmit}>Aceptar</button>
+              <button onClick={() => setShowTopicModal(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

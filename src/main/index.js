@@ -12,6 +12,7 @@ import {
   obtenerUsuarios,
   crearChat,
   obtenerUsuarioPorId,
+  cambiarTemaChat,
   db
 } from '../renderer/src/database.js'
 import { notifyUsers } from './websocket-server.js'
@@ -194,6 +195,20 @@ app.whenReady().then(async () => {
               chatEnriquecido
             )
           }
+        })
+      }
+    })
+  })
+
+  ipcMain.on('cambiar-tema-chat', (event, { chatId, tema }) => {
+    cambiarTemaChat(chatId, tema, (err, result) => {
+      if (err) {
+        event.reply('tema-cambiado-respuesta', { error: err.message })
+      } else {
+        event.reply('tema-cambiado-respuesta', { success: true })
+        notifyUsers([result.usuario1_id, result.usuario2_id], 'tema-cambiado', {
+          chat_id: chatId,
+          tema
         })
       }
     })

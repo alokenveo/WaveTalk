@@ -255,6 +255,35 @@ export function obtenerUsuarioPorId(usuarioId, callback) {
     .catch((err) => callback(err, null))
 }
 
+export function cambiarTemaChat(chatId, tema, callback) {
+  withDatabaseLock(() => {
+    return new Promise((resolve, reject) => {
+      db.run(`UPDATE chats SET tema = ? WHERE id = ?`, [tema, chatId], function (err) {
+        if (err) {
+          reject(err)
+        } else {
+          // Obtener los IDs de los usuarios del chat para la notificación
+          db.get(
+            `SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?`,
+            [chatId],
+            (err, row) => {
+              if (err) {
+                reject(err)
+              } else if (!row) {
+                reject(new Error('Chat no encontrado'))
+              } else {
+                resolve({ usuario1_id: row.usuario1_id, usuario2_id: row.usuario2_id })
+              }
+            }
+          )
+        }
+      })
+    })
+  })
+    .then((result) => callback(null, result))
+    .catch((err) => callback(err, null))
+}
+
 export { db }
 
 export default db
