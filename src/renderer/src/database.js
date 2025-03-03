@@ -127,10 +127,21 @@ export function obtenerChatsUsuario(usuarioId, callback) {
           CASE 
             WHEN c.usuario1_id = ? THEN u2.nombre 
             ELSE u1.nombre 
-          END AS interlocutor
+          END AS interlocutor,
+          m.mensaje AS ultimoMensaje,
+          m.fecha AS fecha_ultimo_mensaje
         FROM chats c
         LEFT JOIN usuarios u1 ON c.usuario1_id = u1.id
         LEFT JOIN usuarios u2 ON c.usuario2_id = u2.id
+        LEFT JOIN (
+          SELECT chat_id, mensaje, fecha
+          FROM mensajes
+          WHERE id IN (
+            SELECT MAX(id)
+            FROM mensajes
+            GROUP BY chat_id
+          )
+        ) m ON c.id = m.chat_id
         WHERE c.usuario1_id = ? OR c.usuario2_id = ?
         `,
         [usuarioId, usuarioId, usuarioId],

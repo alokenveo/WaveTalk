@@ -1,5 +1,6 @@
 // Home.jsx
 import waveTalkLogo from './assets/logo_waveTalk.png'
+import profileLogo from '../../../resources/icon.png?assets'
 import './assets/Home.css'
 import Chat from './components/Chat'
 import { useState, useEffect, useRef } from 'react'
@@ -28,34 +29,65 @@ function Home() {
         console.error('Error al obtener chats:', response.error)
       } else {
         console.log('Chats iniciales cargados:', response.chats)
-        setChats(response.chats)
-        setFilteredChats(response.chats)
+        const sortedChats = response.chats.sort((a, b) => {
+          const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+          const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+          return new Date(dateB) - new Date(dateA)
+        })
+        setChats(sortedChats)
+        setFilteredChats(sortedChats)
       }
     })
 
-    // Conectar al WebSocket
     try {
       console.log('Suscribiendo a WebSocket para usuario:', usuario.id)
       wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
         console.log('Evento recibido en WebSocket (Home.jsx):', eventType, data)
         if (eventType === 'nuevo-chat') {
           console.log('Nuevo chat recibido:', data)
-          setChats((prevChats) => [...prevChats, data])
-          setFilteredChats((prevChats) => [...prevChats, data])
+          setChats((prevChats) => {
+            const updatedChats = [...prevChats, data]
+            return updatedChats.sort((a, b) => {
+              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+              return new Date(dateB) - new Date(dateA)
+            })
+          })
+          setFilteredChats((prevChats) => {
+            const updatedChats = [...prevChats, data]
+            return updatedChats.sort((a, b) => {
+              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+              return new Date(dateB) - new Date(dateA)
+            })
+          })
         }
         if (eventType === 'nuevo-mensaje') {
-          // Quitamos !selectedChat
           console.log('Nuevo mensaje recibido:', data)
-          setChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id ? { ...chat, ultimoMensaje: data.mensaje } : chat
+          setChats((prevChats) => {
+            const updatedChats = prevChats.map((chat) =>
+              chat.id === data.chat_id
+                ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
+                : chat
             )
-          )
-          setFilteredChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id ? { ...chat, ultimoMensaje: data.mensaje } : chat
+            return updatedChats.sort((a, b) => {
+              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+              return new Date(dateB) - new Date(dateA)
+            })
+          })
+          setFilteredChats((prevChats) => {
+            const updatedChats = prevChats.map((chat) =>
+              chat.id === data.chat_id
+                ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
+                : chat
             )
-          )
+            return updatedChats.sort((a, b) => {
+              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+              return new Date(dateB) - new Date(dateA)
+            })
+          })
         }
         if (eventType === 'tema-cambiado') {
           console.log('Tema cambiado recibido:', data)
@@ -117,7 +149,8 @@ function Home() {
     setSearchTerm(term)
     const filtered = chats.filter(
       (chat) =>
-        chat.interlocutor.toLowerCase().includes(term) || chat.tema?.toLowerCase().includes(term)
+        chat.interlocutor.toLowerCase().includes(term) ||
+        (chat.ultimoMensaje && chat.ultimoMensaje.toLowerCase().includes(term))
     )
     setFilteredChats(filtered)
   }
@@ -168,7 +201,11 @@ function Home() {
                 className={`chat-item ${selectedChat?.id === chat.id ? 'selected' : ''}`}
                 onClick={() => handleChatSelect(chat)}
               >
-                {chat.interlocutor} - {chat.tema || 'Sin tema'}
+                <img src={profileLogo} alt="Perfil" className="profile-pic" />
+                <div className="chat-info">
+                  <span className="interlocutor">{chat.interlocutor}</span>
+                  <span className="last-message">{chat.ultimoMensaje || 'Sin mensajes'}</span>
+                </div>
               </div>
             ))
           ) : (
@@ -179,7 +216,7 @@ function Home() {
 
       <div id="trabajo">
         {selectedChat ? (
-          <Chat chat={selectedChat} usuario={usuario} />
+          <Chat chat={selectedChat} usuario={usuario} onDeselect={() => setSelectedChat(null)} />
         ) : (
           <div className="no-chat">
             <img src={waveTalkLogo} alt="Logo WaveTalk" className="logo-trabajo" />

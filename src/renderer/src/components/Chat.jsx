@@ -2,15 +2,37 @@
 import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import './Chat.css'
-import fondoChat from '../../../../resources/fondos/fondo.jpg?assets'
+import fondoDefault from '../../../../resources/fondos/fondo.jpg?assets'
+import fondoAmor from '../../../../resources/fondos/fondo_amor.jpg?assets'
+import fondoCine from '../../../../resources/fondos/fondo_cine.jpg?assets'
+import fondoFutbol from '../../../../resources/fondos/fondo_futbol.jpg?assets'
+import fondoMusica from '../../../../resources/fondos/fondo_musica.jpg?assets'
+import fondoNaturaleza from '../../../../resources/fondos/fondo_naturaleza.jpg?assets'
+import fondoTecnologia from '../../../../resources/fondos/fondo_tecnologia.jpg?assets'
+import fondoViajes from '../../../../resources/fondos/fondo_viajes.jpg?assets'
+import fondoVideojuegos from '../../../../resources/fondos/fondo_videojuegos.jpg?assets'
+import profileLogo from '../../../../resources/icon.png?assets'
 
-function Chat({ chat, usuario }) {
+function Chat({ chat, usuario, onDeselect }) {
   const [mensajes, setMensajes] = useState([])
   const [mensajeInput, setMensajeInput] = useState('')
   const [showOptions, setShowOptions] = useState(false)
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState(chat.tema || null)
   const wsRef = useRef(null)
+
+  // Mapa de temas a fondos
+  const fondosPorTema = {
+    fútbol: fondoFutbol,
+    amor: fondoAmor,
+    viajes: fondoViajes,
+    música: fondoMusica,
+    cine: fondoCine,
+    tecnología: fondoTecnologia,
+    naturaleza: fondoNaturaleza,
+    videojuegos: fondoVideojuegos,
+    null: fondoDefault // Sin tema usa el fondo por defecto
+  }
 
   useEffect(() => {
     window.electron.send('obtener-mensajes-chat', chat.id)
@@ -33,7 +55,6 @@ function Chat({ chat, usuario }) {
           chat.tema = data.tema
         }
         if (eventType === 'chat-estado-cambiado' && data.chat_id === chat.id) {
-          // Nuevo evento
           chat.estado = data.estado
           chat.cerradoPor = data.cerradoPor
         }
@@ -93,7 +114,7 @@ function Chat({ chat, usuario }) {
   }
 
   const handleBlock = () => {
-    window.electron.send('cerrar-chat', { chatId: chat.id, usuarioId: usuario.id }) // Enviar usuarioId
+    window.electron.send('cerrar-chat', { chatId: chat.id, usuarioId: usuario.id })
     window.electron.once('chat-cerrado-respuesta', (event, response) => {
       if (response.error) {
         console.error(response.error)
@@ -116,6 +137,10 @@ function Chat({ chat, usuario }) {
     })
   }
 
+  const handleBack = () => {
+    onDeselect()
+  }
+
   const temasDisponibles = [
     'fútbol',
     'amor',
@@ -129,13 +154,15 @@ function Chat({ chat, usuario }) {
 
   const isBlocked = chat.estado === 'cerrado'
   const canUnblock = isBlocked && chat.cerradoPor === usuario.id
+  const chatBackground = fondosPorTema[chat.tema] || fondoDefault
 
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <button className="back-btn" onClick={() => window.history.back()}>
+        <button className="back-btn" onClick={handleBack}>
           ←
         </button>
+        <img src={profileLogo} alt="Perfil" className="profile-pic" />
         <h3>{chat.interlocutor}</h3>
         <div className="options-container">
           <button className="options-btn" onClick={() => setShowOptions(!showOptions)}>
@@ -158,7 +185,10 @@ function Chat({ chat, usuario }) {
         </div>
       </div>
 
-      <div className="messages-area" style={{ backgroundImage: `url(${fondoChat})` }}>
+      <div
+        className="messages-area chat-background"
+        style={{ backgroundImage: `url(${chatBackground})` }}
+      >
         {mensajes.map((msg) => (
           <div
             key={msg.id}
@@ -229,14 +259,15 @@ Chat.propTypes = {
     tema: PropTypes.string,
     usuario1_id: PropTypes.number.isRequired,
     usuario2_id: PropTypes.number.isRequired,
-    estado: PropTypes.string, // Añadimos estado
-    cerradoPor: PropTypes.number // Añadimos cerradoPor
+    estado: PropTypes.string,
+    cerradoPor: PropTypes.number
   }).isRequired,
   usuario: PropTypes.shape({
     id: PropTypes.number.isRequired,
     nombre: PropTypes.string.isRequired,
     correo: PropTypes.string.isRequired
-  }).isRequired
+  }).isRequired,
+  onDeselect: PropTypes.func.isRequired
 }
 
 export default Chat
