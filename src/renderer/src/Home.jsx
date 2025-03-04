@@ -1,4 +1,3 @@
-// Home.jsx
 import waveTalkLogo from './assets/logo_waveTalk.png'
 import profileLogo from '../../../resources/icon.png?assets'
 import './assets/Home.css'
@@ -20,7 +19,10 @@ function Home() {
   const wsRef = useRef(null)
 
   useEffect(() => {
-    if (!usuario) return
+    if (!usuario) {
+      navigate('/login')
+      return
+    }
 
     // Cargar chats iniciales
     window.electron.send('obtener-chats-usuario', usuario.id)
