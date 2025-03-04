@@ -1,4 +1,3 @@
-// Chat.jsx
 import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import './Chat.css'
@@ -20,8 +19,8 @@ function Chat({ chat, usuario, onDeselect }) {
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState(chat.tema || null)
   const wsRef = useRef(null)
+  const messagesEndRef = useRef(null)
 
-  // Mapa de temas a fondos
   const fondosPorTema = {
     fútbol: fondoFutbol,
     amor: fondoAmor,
@@ -31,10 +30,11 @@ function Chat({ chat, usuario, onDeselect }) {
     tecnología: fondoTecnologia,
     naturaleza: fondoNaturaleza,
     videojuegos: fondoVideojuegos,
-    null: fondoDefault // Sin tema usa el fondo por defecto
+    null: fondoDefault
   }
 
   useEffect(() => {
+    // Cargar mensajes iniciales
     window.electron.send('obtener-mensajes-chat', chat.id)
     window.electron.once('mensajes-respuesta', (event, response) => {
       if (response.error) {
@@ -44,15 +44,20 @@ function Chat({ chat, usuario, onDeselect }) {
       }
     })
 
+    // Conectar al WebSocket
     try {
       console.log('Suscribiendo a WebSocket en Chat.jsx para usuario:', usuario.id)
       wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
         console.log('Evento recibido en WebSocket (Chat.jsx):', eventType, data)
         if (eventType === 'nuevo-mensaje' && data.chat_id === chat.id) {
-          setMensajes((prevMensajes) => [...prevMensajes, data])
+          setMensajes((prevMensajes) => {
+            if (prevMensajes.some((msg) => msg.id === data.id)) return prevMensajes
+            return [...prevMensajes, data]
+          })
         }
         if (eventType === 'tema-cambiado' && data.chat_id === chat.id) {
           chat.tema = data.tema
+          setSelectedTopic(data.tema) // Actualizar el tema seleccionado localmente
         }
         if (eventType === 'chat-estado-cambiado' && data.chat_id === chat.id) {
           chat.estado = data.estado
@@ -71,6 +76,11 @@ function Chat({ chat, usuario, onDeselect }) {
     }
   }, [chat.id, usuario.id])
 
+  // Auto-scroll al final de los mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [mensajes])
+
   const handleSendMessage = (e) => {
     e.preventDefault()
     if (!mensajeInput.trim() || chat.estado === 'cerrado') return
@@ -87,6 +97,7 @@ function Chat({ chat, usuario, onDeselect }) {
         console.error(response.error)
       } else {
         setMensajeInput('')
+        // El mensaje ya se añadirá vía WebSocket, no necesitamos añadirlo manualmente aquí
       }
     })
   }
@@ -107,8 +118,8 @@ function Chat({ chat, usuario, onDeselect }) {
       if (response.error) {
         console.error(response.error)
       } else {
-        chat.tema = selectedTopic
         setShowTopicModal(false)
+        // La actualización del tema se manejará vía WebSocket
       }
     })
   }
@@ -119,7 +130,6 @@ function Chat({ chat, usuario, onDeselect }) {
       if (response.error) {
         console.error(response.error)
       } else {
-        console.log('Chat cerrado')
         setShowOptions(false)
       }
     })
@@ -131,7 +141,6 @@ function Chat({ chat, usuario, onDeselect }) {
       if (response.error) {
         console.error(response.error)
       } else {
-        console.log('Chat desbloqueado')
         setShowOptions(false)
       }
     })
@@ -197,6 +206,7 @@ function Chat({ chat, usuario, onDeselect }) {
             <div className="message-bubble">{msg.mensaje}</div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <form className="input-bar" onSubmit={handleSendMessage}>

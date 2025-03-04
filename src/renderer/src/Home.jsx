@@ -41,85 +41,89 @@ function Home() {
       }
     })
 
+    // Conectar al WebSocket
     try {
       console.log('Suscribiendo a WebSocket para usuario:', usuario.id)
       wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
         console.log('Evento recibido en WebSocket (Home.jsx):', eventType, data)
-        if (eventType === 'nuevo-chat') {
-          console.log('Nuevo chat recibido:', data)
-          setChats((prevChats) => {
-            const updatedChats = [...prevChats, data]
-            return updatedChats.sort((a, b) => {
-              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
-              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
-              return new Date(dateB) - new Date(dateA)
+        switch (eventType) {
+          case 'nuevo-chat':
+            setChats((prevChats) => {
+              // Evitar duplicados
+              if (prevChats.some((chat) => chat.id === data.id)) return prevChats
+              const updatedChats = [...prevChats, data]
+              return updatedChats.sort((a, b) => {
+                const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+                const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+                return new Date(dateB) - new Date(dateA)
+              })
             })
-          })
-          setFilteredChats((prevChats) => {
-            const updatedChats = [...prevChats, data]
-            return updatedChats.sort((a, b) => {
-              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
-              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
-              return new Date(dateB) - new Date(dateA)
+            setFilteredChats((prevChats) => {
+              if (prevChats.some((chat) => chat.id === data.id)) return prevChats
+              const updatedChats = [...prevChats, data]
+              return updatedChats.sort((a, b) => {
+                const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+                const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+                return new Date(dateB) - new Date(dateA)
+              })
             })
-          })
-        }
-        if (eventType === 'nuevo-mensaje') {
-          console.log('Nuevo mensaje recibido:', data)
-          setChats((prevChats) => {
-            const updatedChats = prevChats.map((chat) =>
-              chat.id === data.chat_id
-                ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
-                : chat
-            )
-            return updatedChats.sort((a, b) => {
-              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
-              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
-              return new Date(dateB) - new Date(dateA)
+            break
+          case 'nuevo-mensaje':
+            setChats((prevChats) => {
+              const updatedChats = prevChats.map((chat) =>
+                chat.id === data.chat_id
+                  ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
+                  : chat
+              )
+              return updatedChats.sort((a, b) => {
+                const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+                const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+                return new Date(dateB) - new Date(dateA)
+              })
             })
-          })
-          setFilteredChats((prevChats) => {
-            const updatedChats = prevChats.map((chat) =>
-              chat.id === data.chat_id
-                ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
-                : chat
-            )
-            return updatedChats.sort((a, b) => {
-              const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
-              const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
-              return new Date(dateB) - new Date(dateA)
+            setFilteredChats((prevChats) => {
+              const updatedChats = prevChats.map((chat) =>
+                chat.id === data.chat_id
+                  ? { ...chat, ultimoMensaje: data.mensaje, fecha_ultimo_mensaje: data.fecha }
+                  : chat
+              )
+              return updatedChats.sort((a, b) => {
+                const dateA = a.fecha_ultimo_mensaje || a.fecha_creacion || '1970-01-01'
+                const dateB = b.fecha_ultimo_mensaje || b.fecha_creacion || '1970-01-01'
+                return new Date(dateB) - new Date(dateA)
+              })
             })
-          })
-        }
-        if (eventType === 'tema-cambiado') {
-          console.log('Tema cambiado recibido:', data)
-          setChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+            break
+          case 'tema-cambiado':
+            setChats((prevChats) =>
+              prevChats.map((chat) =>
+                chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+              )
             )
-          )
-          setFilteredChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+            setFilteredChats((prevChats) =>
+              prevChats.map((chat) =>
+                chat.id === data.chat_id ? { ...chat, tema: data.tema } : chat
+              )
             )
-          )
-        }
-        if (eventType === 'chat-estado-cambiado') {
-          console.log('Estado del chat cambiado recibido:', data)
-          setChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id
-                ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
-                : chat
+            break
+          case 'chat-estado-cambiado':
+            setChats((prevChats) =>
+              prevChats.map((chat) =>
+                chat.id === data.chat_id
+                  ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
+                  : chat
+              )
             )
-          )
-          setFilteredChats((prevChats) =>
-            prevChats.map((chat) =>
-              chat.id === data.chat_id
-                ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
-                : chat
+            setFilteredChats((prevChats) =>
+              prevChats.map((chat) =>
+                chat.id === data.chat_id
+                  ? { ...chat, estado: data.estado, cerradoPor: data.cerradoPor }
+                  : chat
+              )
             )
-          )
+            break
+          default:
+            console.log('Evento no manejado:', eventType)
         }
       })
     } catch (error) {
@@ -132,14 +136,13 @@ function Home() {
         wsRef.current.close()
       }
     }
-  }, [usuario])
+  }, [usuario, navigate])
 
   const handleChatSelect = (chat) => {
     setSelectedChat(chat)
   }
 
   const handleLogout = () => {
-    console.log('Estado de ws antes de cerrar:', wsRef.current)
     if (wsRef.current && typeof wsRef.current.close === 'function') {
       wsRef.current.close()
     }
@@ -152,7 +155,7 @@ function Home() {
     const filtered = chats.filter(
       (chat) =>
         chat.interlocutor.toLowerCase().includes(term) ||
-        (chat.ultimoMensaje && chat.ultimoMensaje.toLowerCase().includes(term))
+        (chat.ultimoMensaje && chat.ultimo_mensaje.toLowerCase().includes(term))
     )
     setFilteredChats(filtered)
   }

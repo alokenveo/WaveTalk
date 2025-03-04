@@ -9,6 +9,7 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "start": "electron-vite preview",
+    "start:ws": "node ./websocket-server.js",
     "dev": "electron-vite dev",
     "dev:second": "cross-env PORT=5174 electron-vite dev",
     "build": "electron-vite build",

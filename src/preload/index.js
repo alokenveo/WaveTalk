@@ -2,7 +2,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-const clients = new Map() // Almacenar suscriptores por userId
+const clients = new Map() // Suscriptores por userId
 let ws = null // WebSocket único
 
 const api = {
@@ -24,12 +24,10 @@ const api = {
       ws.onerror = (err) => console.error('Error en WebSocket:', err)
     }
 
-    // Registrar suscriptor
     const subscribers = clients.get(userId) || []
     subscribers.push(onMessage)
     clients.set(userId, subscribers)
 
-    // Retornar función para desuscribirse
     return {
       close: () => {
         const currentSubscribers = clients.get(userId) || []
@@ -40,8 +38,21 @@ const api = {
         }
       }
     }
+  },
+  // Nueva función para enviar notificaciones al servidor WebSocket
+  notifyUsers: (userIds, event, data) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ event, data, targetUserIds: userIds }))
+    } else {
+      console.error('WebSocket no está abierto para enviar notificación')
+    }
   }
 }
+
+// Escuchar notificaciones desde main
+ipcRenderer.on('notificar-usuarios', (event, { userIds, event: eventType, data }) => {
+  api.notifyUsers(userIds, eventType, data)
+})
 
 if (process.contextIsolated) {
   try {
