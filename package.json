@@ -1,7 +1,7 @@
 {
   "name": "wavetalk",
   "version": "1.0.0",
-  "description": "An Electron application with React",
+  "description": "An Electron chat application with React",
   "main": "./out/main/index.js",
   "author": "Alfredo Mituy Okenve",
   "homepage": "https://electron-vite.org",

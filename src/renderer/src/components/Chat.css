@@ -138,6 +138,36 @@
   padding: 5px 10px;
 }
 
+.more-container {
+  position: relative;
+}
+
+.more-menu {
+  position: absolute;
+  bottom: 100%; /* Aparece arriba del botón */
+  left: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2); /* Sombra hacia arriba */
+  z-index: 10;
+}
+
+.more-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.more-menu button:hover {
+  background-color: #f0f0f0;
+}
+
 .input-bar input {
   flex: 1;
   padding: 8px;

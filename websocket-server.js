@@ -1,4 +1,3 @@
-// websocket-server.js
 import { WebSocketServer } from 'ws'
 
 const wss = new WebSocketServer({ port: 8080 })
@@ -20,9 +19,29 @@ wss.on('connection', (ws, req) => {
   clients.set(userId, ws)
 
   ws.on('message', (message) => {
-    const { event, data, targetUserIds } = JSON.parse(message)
-    console.log(`Mensaje recibido de ${userId}:`, { event, data, targetUserIds })
-    notifyUsers(targetUserIds, event, data)
+    let parsedMessage
+    try {
+      parsedMessage = JSON.parse(message)
+    } catch (error) {
+      console.error('Error al parsear mensaje:', error, 'Mensaje recibido:', message)
+      return
+    }
+
+    const { event, data, targetUserIds } = parsedMessage
+    console.log(`Mensaje recibido de ${userId}: ${event}`, data)
+
+    if (event === 'check-connection') {
+      const interlocutorId = data.userId.toString() // Convertimos a cadena
+      console.log(`Verificando conexión de ${interlocutorId}`)
+      console.log('Clientes actuales:', Array.from(clients.keys()))
+      const connected =
+        !!clients.get(interlocutorId) &&
+        clients.get(interlocutorId).readyState === clients.get(interlocutorId).OPEN
+      console.log(`Resultado de la verificación para ${interlocutorId}: ${connected}`)
+      ws.send(JSON.stringify({ event: 'connection-response', data: { connected } }))
+    } else {
+      notifyUsers(targetUserIds, event, data)
+    }
   })
 
   ws.on('close', () => {

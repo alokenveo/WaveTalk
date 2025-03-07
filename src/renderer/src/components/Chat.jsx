@@ -11,6 +11,7 @@ import fondoTecnologia from '../../../../resources/fondos/fondo_tecnologia.jpg?a
 import fondoViajes from '../../../../resources/fondos/fondo_viajes.jpg?assets'
 import fondoVideojuegos from '../../../../resources/fondos/fondo_videojuegos.jpg?assets'
 import profileLogo from '../../../../resources/icon.png?assets'
+import Juego from './Juego'
 
 function Chat({ chat, usuario, onDeselect }) {
   const [mensajes, setMensajes] = useState([])
@@ -20,6 +21,12 @@ function Chat({ chat, usuario, onDeselect }) {
   const [selectedTopic, setSelectedTopic] = useState(chat.tema || null)
   const wsRef = useRef(null)
   const messagesEndRef = useRef(null)
+  const [showMoreOptions, setShowMoreOptions] = useState(false)
+  const [showInviteConfirm, setShowInviteConfirm] = useState(false)
+  const [showInviteReceived, setShowInviteReceived] = useState(false)
+  const [timer, setTimer] = useState(20)
+  const [gameActive, setGameActive] = useState(false)
+  const timerRef = useRef(null)
 
   const fondosPorTema = {
     fútbol: fondoFutbol,
@@ -34,7 +41,6 @@ function Chat({ chat, usuario, onDeselect }) {
   }
 
   useEffect(() => {
-    // Cargar mensajes iniciales
     window.electron.send('obtener-mensajes-chat', chat.id)
     window.electron.once('mensajes-respuesta', (event, response) => {
       if (response.error) {
@@ -44,11 +50,8 @@ function Chat({ chat, usuario, onDeselect }) {
       }
     })
 
-    // Conectar al WebSocket
     try {
-      console.log('Suscribiendo a WebSocket en Chat.jsx para usuario:', usuario.id)
       wsRef.current = window.electron.connectWebSocket(usuario.id, (eventType, data) => {
-        console.log('Evento recibido en WebSocket (Chat.jsx):', eventType, data)
         if (eventType === 'nuevo-mensaje' && data.chat_id === chat.id) {
           setMensajes((prevMensajes) => {
             if (prevMensajes.some((msg) => msg.id === data.id)) return prevMensajes
@@ -57,26 +60,60 @@ function Chat({ chat, usuario, onDeselect }) {
         }
         if (eventType === 'tema-cambiado' && data.chat_id === chat.id) {
           chat.tema = data.tema
-          setSelectedTopic(data.tema) // Actualizar el tema seleccionado localmente
+          setSelectedTopic(data.tema)
         }
         if (eventType === 'chat-estado-cambiado' && data.chat_id === chat.id) {
           chat.estado = data.estado
           chat.cerradoPor = data.cerradoPor
         }
+        if (eventType === 'game-invite' && data.chat_id === chat.id && data.to === usuario.id) {
+          setShowInviteReceived(true)
+          setTimer(20)
+          timerRef.current = setInterval(() => {
+            setTimer((prev) => {
+              if (prev <= 1) {
+                clearInterval(timerRef.current)
+                handleInviteReject()
+                return 0
+              }
+              return prev - 1
+            })
+          }, 1000)
+        }
+        if (eventType === 'game-invite-response' && data.chat_id === chat.id) {
+          if (data.accepted) {
+            setGameActive(true)
+          } else {
+            alert(`Invitación no aceptada por ${chat.interlocutor}`)
+          }
+          setShowInviteConfirm(false)
+        }
+        if (eventType === 'game-ended' && data.chat_id === chat.id) {
+          setGameActive(false)
+          if (data.winner === usuario.id) {
+            // Solo el ganador envía el mensaje
+            const winnerName = usuario.nombre
+            const message = {
+              chat_id: chat.id,
+              usuario_id: usuario.id,
+              mensaje: `${winnerName} ha ganado la partida`,
+              color: 'green'
+            }
+            window.electron.send('enviar-mensaje', message)
+          }
+        }
       })
     } catch (error) {
-      console.error('Error al suscribirse a WebSocket en Chat.jsx:', error)
+      console.error('Error al conectar WebSocket:', error)
     }
 
     return () => {
       if (wsRef.current && typeof wsRef.current.close === 'function') {
-        console.log('Desuscribiendo WebSocket en Chat.jsx')
         wsRef.current.close()
       }
     }
   }, [chat.id, usuario.id])
 
-  // Auto-scroll al final de los mensajes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [mensajes])
@@ -85,26 +122,68 @@ function Chat({ chat, usuario, onDeselect }) {
     e.preventDefault()
     if (!mensajeInput.trim() || chat.estado === 'cerrado') return
 
-    const nuevoMensaje = {
-      chat_id: chat.id,
-      usuario_id: usuario.id,
-      mensaje: mensajeInput
-    }
-
+    const nuevoMensaje = { chat_id: chat.id, usuario_id: usuario.id, mensaje: mensajeInput }
     window.electron.send('enviar-mensaje', nuevoMensaje)
     window.electron.once('mensaje-enviado-respuesta', (event, response) => {
-      if (response.error) {
-        console.error(response.error)
-      } else {
-        setMensajeInput('')
-        // El mensaje ya se añadirá vía WebSocket, no necesitamos añadirlo manualmente aquí
-      }
+      if (response.error) console.error(response.error)
+      else setMensajeInput('')
     })
   }
 
-  const handleChangeTopic = () => {
-    setShowOptions(false)
-    setShowTopicModal(true)
+  const handleInvite = async () => {
+    setShowMoreOptions(false)
+    const interlocutorId = chat.usuario1_id === usuario.id ? chat.usuario2_id : chat.usuario1_id
+    console.log('Usuario:', usuario.id)
+    try {
+      const response = await window.electron.sendWebSocketMessage(usuario.id, 'check-connection', {
+        userId: interlocutorId
+      })
+      if (!response.connected) {
+        alert(
+          `Sentimos informar de que el usuario ${chat.interlocutor} no se encuentra disponible en este momento`
+        )
+      } else {
+        setShowInviteConfirm(true)
+      }
+    } catch (error) {
+      console.error('Error checking user connection:', error)
+      alert(
+        `Sentimos informar de que el usuario ${chat.interlocutor} no se encuentra disponible en este momento`
+      )
+    }
+  }
+
+  const handleInviteConfirm = () => {
+    setShowInviteConfirm(false)
+    const interlocutorId = chat.usuario1_id === usuario.id ? chat.usuario2_id : chat.usuario1_id
+    console.log(`Enviando invitación desde ${usuario.id} a ${interlocutorId} para chat ${chat.id}`)
+    window.electron.send('send-game-invite', {
+      chatId: chat.id,
+      from: usuario.id,
+      to: interlocutorId
+    })
+  }
+
+  const handleInviteReject = () => {
+    setShowInviteReceived(false)
+    window.electron.send('respond-game-invite', {
+      chatId: chat.id,
+      from: usuario.id,
+      accepted: false
+    })
+    alert('Has rechazado unirte a la partida')
+    clearInterval(timerRef.current)
+  }
+
+  const handleInviteAccept = () => {
+    setShowInviteReceived(false)
+    window.electron.send('respond-game-invite', {
+      chatId: chat.id,
+      from: usuario.id,
+      accepted: true
+    })
+    setGameActive(true)
+    clearInterval(timerRef.current)
   }
 
   const handleTopicSelect = (e) => {
@@ -119,7 +198,6 @@ function Chat({ chat, usuario, onDeselect }) {
         console.error(response.error)
       } else {
         setShowTopicModal(false)
-        // La actualización del tema se manejará vía WebSocket
       }
     })
   }
@@ -146,29 +224,13 @@ function Chat({ chat, usuario, onDeselect }) {
     })
   }
 
-  const handleBack = () => {
-    onDeselect()
-  }
-
-  const temasDisponibles = [
-    'fútbol',
-    'amor',
-    'viajes',
-    'música',
-    'cine',
-    'tecnología',
-    'naturaleza',
-    'videojuegos'
-  ]
-
   const isBlocked = chat.estado === 'cerrado'
-  const canUnblock = isBlocked && chat.cerradoPor === usuario.id
   const chatBackground = fondosPorTema[chat.tema] || fondoDefault
 
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <button className="back-btn" onClick={handleBack}>
+        <button className="back-btn" onClick={onDeselect}>
           ←
         </button>
         <img src={profileLogo} alt="Perfil" className="profile-pic" />
@@ -179,9 +241,16 @@ function Chat({ chat, usuario, onDeselect }) {
           </button>
           {showOptions && (
             <div className="options-menu">
-              <button onClick={handleChangeTopic}>Cambiar tema</button>
+              <button
+                onClick={() => {
+                  setShowOptions(false)
+                  setShowTopicModal(true)
+                }}
+              >
+                Cambiar tema
+              </button>
               {isBlocked ? (
-                canUnblock ? (
+                chat.cerradoPor === usuario.id ? (
                   <button onClick={handleUnblock}>Desbloquear</button>
                 ) : (
                   <p>Chat bloqueado por otro usuario</p>
@@ -203,16 +272,30 @@ function Chat({ chat, usuario, onDeselect }) {
             key={msg.id}
             className={`message ${msg.usuario_id === usuario.id ? 'sent' : 'received'}`}
           >
-            <div className="message-bubble">{msg.mensaje}</div>
+            <div className="message-bubble" style={{ color: msg.color || 'inherit' }}>
+              {msg.mensaje}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
       <form className="input-bar" onSubmit={handleSendMessage}>
-        <button type="button" className="more-btn" disabled={isBlocked}>
-          +
-        </button>
+        <div className="more-container">
+          <button
+            type="button"
+            className="more-btn"
+            disabled={isBlocked}
+            onClick={() => setShowMoreOptions(!showMoreOptions)}
+          >
+            +
+          </button>
+          {showMoreOptions && (
+            <div className="more-menu">
+              <button onClick={handleInvite}>Retar a {chat.interlocutor}</button>
+            </div>
+          )}
+        </div>
         <input
           type="text"
           value={mensajeInput}
@@ -236,17 +319,26 @@ function Chat({ chat, usuario, onDeselect }) {
                   value="null"
                   checked={selectedTopic === null}
                   onChange={handleTopicSelect}
-                />
+                />{' '}
                 Sin tema
               </label>
-              {temasDisponibles.map((tema) => (
+              {[
+                'fútbol',
+                'amor',
+                'viajes',
+                'música',
+                'cine',
+                'tecnología',
+                'naturaleza',
+                'videojuegos'
+              ].map((tema) => (
                 <label key={tema}>
                   <input
                     type="radio"
                     value={tema}
                     checked={selectedTopic === tema}
                     onChange={handleTopicSelect}
-                  />
+                  />{' '}
                   {tema.charAt(0).toUpperCase() + tema.slice(1)}
                 </label>
               ))}
@@ -257,6 +349,43 @@ function Chat({ chat, usuario, onDeselect }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showInviteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Confirmar Invitación</h2>
+            <p>¿Quieres invitar a {chat.interlocutor} a una partida de Tres en Raya?</p>
+            <div className="modal-buttons">
+              <button onClick={handleInviteConfirm}>Confirmar</button>
+              <button onClick={() => setShowInviteConfirm(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInviteReceived && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Invitación Recibida</h2>
+            <p>{chat.interlocutor} te invita a unirte a una partida de Tres en Raya</p>
+            <p>Tiempo restante: {timer} segundos</p>
+            <div className="modal-buttons">
+              <button onClick={handleInviteAccept}>Aceptar</button>
+              <button onClick={handleInviteReject}>Rechazar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gameActive && (
+        <Juego
+          chat={chat}
+          usuario={usuario}
+          onGameEnd={() => setGameActive(false)}
+          player1Name={chat.usuario1_id === usuario.id ? usuario.nombre : chat.interlocutor}
+          player2Name={chat.usuario2_id === usuario.id ? usuario.nombre : chat.interlocutor}
+        />
       )}
     </div>
   )

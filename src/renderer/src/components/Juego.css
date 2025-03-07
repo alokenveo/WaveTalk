@@ -1,0 +1,72 @@
+.game-modal {
+  padding: 20px;
+  text-align: center;
+}
+
+.board-container {
+  position: relative;
+  display: inline-block;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  grid-gap: 5px;
+  margin: 20px auto;
+}
+
+.square {
+  width: 60px;
+  height: 60px;
+  font-size: 36px;
+  border: 2px solid #333;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.square.x {
+  color: red;
+}
+
+.square.o {
+  color: blue;
+}
+
+.square:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.winning-line {
+  position: absolute;
+  background: #000;
+  transform-origin: left;
+}
+
+.line-0-2, .line-3-5, .line-6-8 { /* Horizontales */
+  width: 180px;
+  height: 4px;
+}
+.line-0-2 { top: 30px; left: 10px; }
+.line-3-5 { top: 90px; left: 10px; }
+.line-6-8 { top: 150px; left: 10px; }
+
+.line-0-6, .line-1-7, .line-2-8 { /* Verticales */
+  width: 4px;
+  height: 180px;
+}
+.line-0-6 { left: 30px; top: 10px; }
+.line-1-7 { left: 90px; top: 10px; }
+.line-2-8 { left: 150px; top: 10px; }
+
+.line-0-8, .line-2-6 { /* Diagonales */
+  width: 254px; /* Aproximado para 180px diagonal */
+  height: 4px;
+}
+.line-0-8 { top: 90px; left: 10px; transform: rotate(45deg); }
+.line-2-6 { top: 90px; left: 10px; transform: rotate(-45deg); }
+
+@keyframes drawLine {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}

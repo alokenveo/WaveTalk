@@ -269,6 +269,69 @@ app.whenReady().then(async () => {
     })
   })
 
+  ipcMain.on('send-game-invite', (event, { chatId, from, to }) => {
+    console.log(`Invitación enviada desde ${from} a ${to} para el chat ${chatId}`)
+    const userIds = [to] // Solo notificar al destinatario
+    event.sender.send('notificar-usuarios', {
+      userIds,
+      event: 'game-invite',
+      data: {
+        chat_id: chatId,
+        from,
+        to
+      }
+    })
+  })
+
+  // Responder a la invitación de juego
+  ipcMain.on('respond-game-invite', (event, { chatId, from, accepted }) => {
+    console.log(
+      `Respuesta a invitación: ${accepted ? 'Aceptada' : 'Rechazada'} por ${from} en chat ${chatId}`
+    )
+    db.get('SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?', [chatId], (err, row) => {
+      if (!err && row) {
+        const userIds = [row.usuario1_id, row.usuario2_id]
+        event.sender.send('notificar-usuarios', {
+          userIds,
+          event: 'game-invite-response',
+          data: {
+            chat_id: chatId,
+            from,
+            accepted
+          }
+        })
+      } else {
+        console.error('Error al obtener usuarios del chat:', err)
+      }
+    })
+  })
+
+  ipcMain.on('send-game-move', (event, { chatId, board, from }) => {
+    db.get('SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?', [chatId], (err, row) => {
+      if (!err && row) {
+        const userIds = [row.usuario1_id, row.usuario2_id]
+        event.sender.send('notificar-usuarios', {
+          userIds,
+          event: 'game-move',
+          data: { chatId, board }
+        })
+      }
+    })
+  })
+
+  ipcMain.on('notify-game-end', (event, { chatId, winner, board }) => {
+    db.get('SELECT usuario1_id, usuario2_id FROM chats WHERE id = ?', [chatId], (err, row) => {
+      if (!err && row) {
+        const userIds = [row.usuario1_id, row.usuario2_id]
+        event.sender.send('notificar-usuarios', {
+          userIds,
+          event: 'game-ended',
+          data: { chat_id: chatId, winner, board }
+        })
+      }
+    })
+  })
+
   createWindow()
 
   app.on('activate', function () {
