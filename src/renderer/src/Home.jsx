@@ -188,7 +188,7 @@ function Home() {
 
       <div id="mensajes">
         <div>
-          <h3>{usuario?.nombre || 'Usuario'}</h3>
+          <h3 id="nombre-usuario">{usuario?.nombre || 'Usuario'}</h3>
         </div>
         <div className="buscador">
           <input

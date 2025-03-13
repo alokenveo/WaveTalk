@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-const clients = new Map() // Suscriptores por userId
-let ws = null // WebSocket único
+const clients = new Map()
+let ws = null
 
 const api = {
   send: (channel, data) => ipcRenderer.send(channel, data),

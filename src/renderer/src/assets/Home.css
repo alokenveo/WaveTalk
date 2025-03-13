@@ -159,3 +159,10 @@
     max-width: 200px;
     opacity: 0.5;
 }
+
+#nombre-usuario{
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-top: 15px;
+}

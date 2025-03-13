@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: wavetalk
+appId: com.wavetalk.app
+productName: WaveTalk
 directories:
   buildResources: build
 files:
@@ -39,4 +39,4 @@ appImage:
 npmRebuild: false
 publish:
   provider: generic
-  url: https://example.com/auto-updates
+  url: https://github.com/alokenveo/WaveTalk/
